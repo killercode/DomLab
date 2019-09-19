@@ -38,6 +38,7 @@
      - platformio update
 
  script:
+     - platformio lib install PubSubClient
      - platformio run
 
 
