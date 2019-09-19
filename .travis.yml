@@ -36,7 +36,6 @@
  install:
      - pip install -U platformio
      - platformio update
-     teste
 
  script:
      - platformio lib install PubSubClient
