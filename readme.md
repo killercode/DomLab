@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/killercode/DomLab.svg?branch=master)](https://travis-ci.org/killercode/DomLab)
+
 =Setting up board=
 
 Programming the sketch for the ATMEGA:
