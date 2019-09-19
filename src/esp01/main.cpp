@@ -8,8 +8,8 @@ void callback(char* topic, byte* payload, unsigned int length);
 // WIFI Setup
 WiFiClient wifiClient;
 #define MQTT_SERVER "192.168.1.96"  //you MQTT IP Address
-const char* ssid = "MEO-KILLERCODE2";
-const char* password = "ericeira";
+const char* ssid = "YOURSSID";
+const char* password = "yourpassword";
 String inString = "";
 
 // MQTT Channel Subscription
