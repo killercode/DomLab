@@ -1,13 +1,3 @@
-/*
-Programming the sketch for the ESP8266:
-
-DIP SWITCH
- | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
- |OFF|OFF|OFF|OFF|ON |ON |OFF|N/A|
-
-RX/TX SWITCH TX00
-*/
-
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
@@ -23,6 +13,7 @@ const char* password = "ericeira";
 String inString = "";
 
 // MQTT Channel Subscription
+// TODO: auto register the topics ( arduino should provide configuration )
 char const* switchTopic1 = "/house/switch1/";
 char const* switchTopic2 = "/house/switch2/";
 char const* switchTopic3 = "/house/switch3/";
@@ -50,8 +41,8 @@ String macToStr(const uint8_t* mac)
 }
 
 // If wifi connection is down, reconnect
-void reconnectWifi() {
-
+void reconnectWifi() 
+{
   //attempt to connect to the wifi if connection is lost
   if(WiFi.status() != WL_CONNECTED)
   {
