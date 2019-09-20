@@ -8,8 +8,15 @@ void callback(char* topic, byte* payload, unsigned int length);
 // WIFI Setup
 WiFiClient wifiClient;
 #define MQTT_SERVER "192.168.1.96"  //you MQTT IP Address
-const char* ssid = "YOURSSID";
-const char* password = "yourpassword";
+
+#ifndef SSID_NAME 
+#define SSID_NAME "ssid"
+#endif
+
+#ifndef SSID_PASS
+#define SSID_PASS "password"
+#endif
+
 String inString = "";
 
 // MQTT Channel Subscription
@@ -47,7 +54,7 @@ void reconnectWifi()
   if(WiFi.status() != WL_CONNECTED)
   {
     //debug printing
-    Serial.print("!:Connecting to " + String(ssid) + ";");
+    Serial.print("!:Connecting to " + String(SSID_NAME) + ";");
     
 
     //loop while we wait for connection
@@ -117,7 +124,9 @@ void setup()
   delay(100);
 
   //start wifi subsystem
-  WiFi.begin(ssid, password);
+  Serial.println(SSID_NAME);
+  Serial.println(SSID_PASS);
+  WiFi.begin(SSID_NAME, SSID_PASS);
   //attempt to connect to the WIFI network and then connect to the MQTT server
   reconnectWifi();
   
