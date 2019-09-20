@@ -103,14 +103,8 @@ void reconnectMQTT()
             {
                 // Update accordingly with your MQTT account
                 Serial.print("!:MQTT Connected;");
-                client.subscribe(switchTopic1);
-                client.subscribe(switchTopic2);
-                client.subscribe(switchTopic3);
-                client.subscribe(switchTopic4);
-                client.subscribe(switchTopic5);
-                client.subscribe(switchTopic6);
-                client.subscribe(switchTopic7);
-                client.subscribe(switchTopic8);
+                Serial.print("<config:announce;");
+
                 // Do not forget to replicate the above line if you will have more than the above number of relay switches
             }
 
@@ -256,6 +250,11 @@ void loop()
 
                 channel.toCharArray(cbuff, csize + 1);
                 action.toCharArray(sbuff, ssize + 1);
+
+                if (inString.substring(cstart, cend).equals("announce"))
+                {
+                    client.subscribe(sbuff);
+                }
 
                 Serial.print("!:CHANNEL - " + String(cbuff) + ";");
                 delay(10);

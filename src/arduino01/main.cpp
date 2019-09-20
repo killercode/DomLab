@@ -1,3 +1,6 @@
+/**
+ * @author Diogo Alves
+ */
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include "Button.h"
@@ -33,6 +36,12 @@ Relay out[8] = {
     Relay(PIN_SWITCH_8, "/house/switch8", HIGH),
 };
 
+/**
+ * @brief  Trigget button events
+ * @param  *button_name: Name of the button that triggered the event
+ * @param  event: 1 short press, 2 long press
+ * @retval None
+ */
 void button_event(const char *button_name, int event)
 {
     if (event)
@@ -64,6 +73,38 @@ void button_event(const char *button_name, int event)
     }
 }
 
+/**
+ * @brief  Announce the devices to ESP8266
+ * @retval None
+ */
+void announceToESP()
+{
+    for (int i = 0; i < 8; i++)
+        Serial.print(">announce:" + out[i].getName());
+}
+
+/**
+ * @brief  After receive a message we should update the device status
+ * @param  channel: topic / name of the device that changed
+ * @param  action: What was the change
+ * @retval None
+ */
+void updateDeviceStatus(String channel, String action)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        if (out[i].getName().equals(channel))
+        {
+            out[i].setStringState(action);
+            Serial3.print(">" + out[i].getName() + "Confirm/:" + action + ";");
+        }
+    }
+}
+
+/**
+ * @brief  Handles the received messages from serial communications
+ * @retval None
+ */
 void SerialHandler()
 {
     while (Serial3.available())
@@ -81,11 +122,11 @@ void SerialHandler()
             Serial3.flush();
             inString = "";
         }
+
         if (inChar == ';')
         {
             if (inString.indexOf('<') >= 0)
             {
-
                 int cstart = 1;
                 int cend = inString.indexOf(':');
                 int csize = cend - cstart;
@@ -94,16 +135,19 @@ void SerialHandler()
                 int send = inString.indexOf(';');
                 int ssize = send - sstart;
 
-                for (int i = 0; i < 8; i++)
+                if (inString.substring(cstart, cend).equals("config"))
                 {
-                    if (out[i].getName().equals(inString.substring(cstart, csize)))
+                    if (inString.substring(sstart, send).equals("announce"))
                     {
-                        String channel = inString.substring(cstart, cend);
-                        String action = inString.substring(sstart, send);
-
-                        out[i].setStringState(action);
-                        Serial3.print(">" + out[i].getName() + "Confirm/:" + action + ";");
+                        announceToESP();
                     }
+                }
+                else
+                {
+                    String channel = inString.substring(cstart, cend);
+                    String action = inString.substring(sstart, send);
+
+                    updateDeviceStatus(channel, action);
                 }
             }
             else if (inString.indexOf('!') >= 0)
@@ -120,6 +164,10 @@ void SerialHandler()
     }
 }
 
+/**
+ * @brief  Setup
+ * @retval None
+ */
 void setup()
 {
 
@@ -144,8 +192,14 @@ void setup()
     button1.init();
     button2.init();
     button3.init();
+
+    announceToESP();
 }
 
+/**
+ * @brief  Device Loop
+ * @retval None
+ */
 void loop()
 {
     // do other things
