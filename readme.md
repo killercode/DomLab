@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/killercode/DomLab.svg?branch=master)](https://travis-ci.org/killercode/DomLab)
 [![CodeFactor](https://www.codefactor.io/repository/github/killercode/domlab/badge)](https://www.codefactor.io/repository/github/killercode/domlab)
+[![](https://codescene.io/projects/5595/status.svg) Get more details at **codescene.io**.](https://codescene.io/projects/5595/jobs/latest-successful/results)
 
 ## Repository of my home automation firmwares
 
