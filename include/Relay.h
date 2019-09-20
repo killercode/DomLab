@@ -1,74 +1,73 @@
-#include<Arduino.h>
+#include <Arduino.h>
 
 /**
  * @brief  Relay class to easier the operations
  * @note   IMPORTANT: MQTT Logic is inverted!
  * @retval None
  */
-class Relay 
+class Relay
 {
-    public:
-        /**
-         * @brief  Constructor  
-         * @param  pin: pin where the relay is connected 
-         * @param  name: name for the relay
-         * @param  state: state of the relay
-         * @retval Relay object
-         */
-        Relay(int pin, String name, uint8_t state);
+public:
+    /**
+     * @brief  Constructor
+     * @param  pin: pin where the relay is connected
+     * @param  name: name for the relay
+     * @param  state: state of the relay
+     * @retval Relay object
+     */
+    Relay(int pin, String name, uint8_t state);
 
-        /**
-         * @brief  Initialization done after construction, to permit static instances
-         * @retval None
-         */
-        void init();
-        
-        /// Get State
-        /**
-         * @brief  Get the actual state of the relay
-         * @retval 1 or 0
-         */
-        uint8_t getState();
+    /**
+     * @brief  Initialization done after construction, to permit static instances
+     * @retval None
+     */
+    void init();
 
-        /**
-         * @brief  Set the state of the relay
-         * @note   this will actually update it physically
-         * @param  newState: new state to be set
-         * @retval None
-         */
-        void setState(uint8_t newState);
+    /// Get State
+    /**
+     * @brief  Get the actual state of the relay
+     * @retval 1 or 0
+     */
+    uint8_t getState();
 
-        /**
-         * @brief  Get MQTT friendly state 
-         * @note   
-         * @retval "1" or "0"
-         */
-        String getStringState();
+    /**
+     * @brief  Set the state of the relay
+     * @note   this will actually update it physically
+     * @param  newState: new state to be set
+     * @retval None
+     */
+    void setState(uint8_t newState);
 
-        /**
-         * @brief  set MQTT friendly state
-         * @note   
-         * @retval None
-         */
-        void setStringState(String newstate);
+    /**
+     * @brief  Get MQTT friendly state
+     * @note
+     * @retval "1" or "0"
+     */
+    String getStringState();
 
-        /**
-         * @brief  Get the relay name as a MQTT topic
-         * @note   
-         * @retval mqtt topic for the device
-         */
-        String getName();
+    /**
+     * @brief  set MQTT friendly state
+     * @note
+     * @retval None
+     */
+    void setStringState(String newstate);
 
-        String MQTTSwitchState();
+    /**
+     * @brief  Get the relay name as a MQTT topic
+     * @note
+     * @retval mqtt topic for the device
+     */
+    String getName();
 
-    private:
-        String name;
-        uint8_t state;  
-        String mqttstate;
+    String MQTTSwitchState();
 
-    protected:
-        const int pin;  // pin
-        
+private:
+    String name;
+    uint8_t state;
+    String mqttstate;
+
+protected:
+    const int pin; // pin
 };
 
 Relay::Relay(int p, String n, uint8_t s) : pin(p), name(n), state(s)
@@ -77,8 +76,8 @@ Relay::Relay(int p, String n, uint8_t s) : pin(p), name(n), state(s)
 
 void Relay::init()
 {
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, state); // pull-up  
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, state); // pull-up
 }
 
 void Relay::setState(uint8_t newState)
@@ -120,7 +119,6 @@ void Relay::setStringState(String newstate)
         state = LOW;
     }
     setState(state);
-    
 }
 
 String Relay::MQTTSwitchState()
@@ -135,5 +133,4 @@ String Relay::MQTTSwitchState()
         setState(LOW);
         return "1";
     }
-    
 }
