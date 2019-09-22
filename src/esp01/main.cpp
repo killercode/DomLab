@@ -31,15 +31,6 @@ WiFiClient wifiClient;
 String inString = "";
 
 // MQTT Channel Subscription
-// TODO: auto register the topics ( arduino should provide configuration )
-char const *switchTopic1 = "/house/switch1/";
-char const *switchTopic2 = "/house/switch2/";
-char const *switchTopic3 = "/house/switch3/";
-char const *switchTopic4 = "/house/switch4/";
-char const *switchTopic5 = "/house/switch5/";
-char const *switchTopic6 = "/house/switch6/";
-char const *switchTopic7 = "/house/switch7/";
-char const *switchTopic8 = "/house/switch8/";
 
 PubSubClient client(MQTT_SERVER, 1883, callback, wifiClient);
 
@@ -92,7 +83,7 @@ void reconnectMQTT()
 
             // Generate client name based on MAC address and last 8 bits of microsecond counter
             String clientName;
-            clientName += "esp8266-garagem-";
+            clientName += "garagem-";
             uint8_t mac[6];
             WiFi.macAddress(mac);
             clientName += macToStr(mac);
@@ -129,8 +120,6 @@ void setup()
     delay(100);
 
     //start wifi subsystem
-    Serial.println(SSID_NAME);
-    Serial.println(SSID_PASS);
     WiFi.begin(SSID_NAME, SSID_PASS);
     //attempt to connect to the WIFI network and then connect to the MQTT server
     reconnectWifi();
@@ -187,8 +176,6 @@ void setup()
     ArduinoOTA.begin();
 
     reconnectMQTT();
-    Serial.print("!:Ready;");
-    Serial.print("!:" + IpAddress2String(WiFi.localIP()) + ";");
 }
 
 void loop()
@@ -251,16 +238,21 @@ void loop()
                 channel.toCharArray(cbuff, csize + 1);
                 action.toCharArray(sbuff, ssize + 1);
 
-                if (inString.substring(cstart, cend).equals("announce"))
+                if (channel.equals("announce"))
                 {
                     client.subscribe(sbuff);
+                    Serial.print("!:ANNOUNCED - " + String(sbuff) + ";");
+                    delay(10);
                 }
-
-                Serial.print("!:CHANNEL - " + String(cbuff) + ";");
-                delay(10);
-                Serial.print("!:ACTION - " + String(sbuff) + ";");
-                delay(10);
-                client.publish(cbuff, sbuff);
+                else
+                {
+                    Serial.print("!:CHANNEL - " + String(cbuff) + ";");
+                    delay(10);
+                    Serial.print("!:ACTION - " + String(sbuff) + ";");
+                    delay(10);
+                    client.publish(cbuff, sbuff, true);
+                }
+                Serial.flush();
             }
             else
             {

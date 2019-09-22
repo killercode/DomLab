@@ -1,21 +1,35 @@
 #include <Arduino.h>
 
 /**
+ * @brief   NC - Normally closed
+ *          NO - Normally open
+ * @note
+ * @retval None
+ */
+enum
+{
+    NC = 0,
+    NO
+};
+/**
  * @brief  Relay class to easier the operations
  * @note   IMPORTANT: MQTT Logic is inverted!
  * @retval None
  */
 class Relay
 {
+
 public:
     /**
      * @brief  Constructor
      * @param  pin: pin where the relay is connected
-     * @param  name: name for the relay
+     * @param  mainTopic: maintopic for the relay
+     * @param  commandTopic: commandTopic for the relay
+     * @param  stateTopic: stateTopic for the relay
      * @param  state: state of the relay
      * @retval Relay object
      */
-    Relay(int pin, String name, uint8_t state);
+    Relay(int pin, String mainTopic, String commandTopic, String stateTopic, uint8_t state, int operation);
 
     /**
      * @brief  Initialization done after construction, to permit static instances
@@ -57,20 +71,28 @@ public:
      * @note
      * @retval mqtt topic for the device
      */
-    String getName();
+    //String getName();
 
-    String MQTTSwitchState();
+    String SwitchState();
+
+    String getCommandMsg();
+    String getStateMsg();
+
+    String getStateTopic();
+    String getCommandTopic();
 
 private:
-    String name;
     uint8_t state;
-    String mqttstate;
+    int operation;
+    String mainTopic;
+    String commandTopic;
+    String stateTopic;
 
 protected:
     const int pin; // pin
 };
 
-Relay::Relay(int p, String n, uint8_t s) : pin(p), name(n), state(s)
+Relay::Relay(int p, String m, String ct, String st, uint8_t s, int o) : pin(p), mainTopic(m), commandTopic(ct), stateTopic(st), state(s), operation(o)
 {
 }
 
@@ -91,11 +113,6 @@ uint8_t Relay::getState()
     return state;
 }
 
-String Relay::getName()
-{
-    return name;
-}
-
 String Relay::getStringState()
 {
     if (state == 0)
@@ -110,27 +127,78 @@ String Relay::getStringState()
 
 void Relay::setStringState(String newstate)
 {
-    if (newstate.equals("0"))
+    if (operation == NC)
     {
-        state = HIGH;
+        if (newstate.equals("0"))
+        {
+            state = HIGH;
+        }
+        else
+        {
+            state = LOW;
+        }
     }
     else
     {
-        state = LOW;
+        if (newstate.equals("0"))
+        {
+            state = LOW;
+        }
+        else
+        {
+            state = HIGH;
+        }
     }
+
     setState(state);
 }
 
-String Relay::MQTTSwitchState()
+String Relay::SwitchState()
 {
-    if (state == LOW)
+    if (operation == NC)
     {
-        setState(HIGH);
-        return "0";
+        if (state == LOW)
+        {
+            setState(HIGH);
+            return "0";
+        }
+        else
+        {
+            setState(LOW);
+            return "1";
+        }
     }
     else
     {
-        setState(LOW);
-        return "1";
+        if (state == LOW)
+        {
+            setState(HIGH);
+            return "1";
+        }
+        else
+        {
+            setState(LOW);
+            return "2";
+        }
     }
+}
+
+String Relay::getCommandMsg()
+{
+    return ">" + mainTopic + commandTopic + ":" + getStringState() + ";";
+}
+
+String Relay::getStateMsg()
+{
+    return ">" + mainTopic + stateTopic + ":" + getStringState() + ";";
+}
+
+String Relay::getStateTopic()
+{
+    return mainTopic + stateTopic;
+}
+
+String Relay::getCommandTopic()
+{
+    return mainTopic + commandTopic;
 }

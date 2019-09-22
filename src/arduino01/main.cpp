@@ -21,19 +21,19 @@
 
 String inString;
 
-ButtonHandler button1(INPUT1, DEFAULT_LONGPRESS_LEN * 2);
-ButtonHandler button2(INPUT2, DEFAULT_LONGPRESS_LEN * 2);
-ButtonHandler button3(INPUT3, DEFAULT_LONGPRESS_LEN * 2);
+Button button1(INPUT1, DEFAULT_LONGPRESS_LEN * 2);
+Button button2(INPUT2, DEFAULT_LONGPRESS_LEN * 2);
+Button button3(INPUT3, DEFAULT_LONGPRESS_LEN * 2);
 
 Relay out[8] = {
-    Relay(PIN_SWITCH_1, "/house/switch1", HIGH),
-    Relay(PIN_SWITCH_2, "/house/switch2", HIGH),
-    Relay(PIN_SWITCH_3, "/house/switch3", HIGH),
-    Relay(PIN_SWITCH_4, "/house/switch4", HIGH),
-    Relay(PIN_SWITCH_5, "/house/switch5", HIGH),
-    Relay(PIN_SWITCH_6, "/house/switch6", HIGH),
-    Relay(PIN_SWITCH_7, "/house/switch7", HIGH),
-    Relay(PIN_SWITCH_8, "/house/switch8", HIGH),
+    Relay(PIN_SWITCH_1, "/house/switch1/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_2, "/house/switch2/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_3, "/house/switch3/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_4, "/house/switch4/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_5, "/house/switch5/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_6, "/house/switch6/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_7, "/house/switch7/", "command/", "state/", HIGH, NC),
+    Relay(PIN_SWITCH_8, "/house/switch8/", "command/", "state/", HIGH, NC),
 };
 
 /**
@@ -51,23 +51,31 @@ void button_event(const char *button_name, int event)
             int bNum = String(button_name).toInt();
             if (bNum == 1)
             {
-                Serial3.print(">" + out[0].getName() + "Confirm/:" + out[0].MQTTSwitchState() + ";");
-                Serial3.print(">" + out[1].getName() + "Confirm/:" + out[1].MQTTSwitchState() + ";");
+                out[0].SwitchState();
+                out[1].SwitchState();
+                Serial3.print(out[0].getCommandMsg());
+                Serial3.print(out[1].getCommandMsg());
             }
             else if (bNum == 2)
             {
-                Serial3.print(">" + out[2].getName() + "Confirm/:" + out[2].MQTTSwitchState() + ";");
-                Serial3.print(">" + out[3].getName() + "Confirm/:" + out[3].MQTTSwitchState() + ";");
+                out[2].SwitchState();
+                out[3].SwitchState();
+                Serial3.print(out[2].getCommandMsg());
+                Serial3.print(out[3].getCommandMsg());
             }
             else if (bNum == 3)
             {
-                Serial3.print(">" + out[4].getName() + "Confirm/:" + out[4].MQTTSwitchState() + ";");
-                Serial3.print(">" + out[5].getName() + "Confirm/:" + out[5].MQTTSwitchState() + ";");
+                out[4].SwitchState();
+                out[5].SwitchState();
+                Serial3.print(out[4].getCommandMsg());
+                Serial3.print(out[5].getCommandMsg());
             }
             else
             {
-                Serial3.print(">" + out[6].getName() + "Confirm/:" + out[6].MQTTSwitchState() + ";");
-                Serial3.print(">" + out[7].getName() + "Confirm/:" + out[7].MQTTSwitchState() + ";");
+                out[6].SwitchState();
+                out[7].SwitchState();
+                Serial3.print(out[6].getCommandMsg());
+                Serial3.print(out[7].getCommandMsg());
             }
         }
     }
@@ -80,7 +88,11 @@ void button_event(const char *button_name, int event)
 void announceToESP()
 {
     for (int i = 0; i < 8; i++)
-        Serial.print(">announce:" + out[i].getName());
+    {
+        Serial.println("DEBUG: ANNOUNCE - " + out[i].getCommandTopic());
+        Serial3.print(">announce:" + out[i].getCommandTopic() + ";");
+        delay(10);
+    }
 }
 
 /**
@@ -93,10 +105,11 @@ void updateDeviceStatus(String channel, String action)
 {
     for (int i = 0; i < 8; i++)
     {
-        if (out[i].getName().equals(channel))
+        if (out[i].getCommandTopic().equals(channel))
         {
             out[i].setStringState(action);
-            Serial3.print(">" + out[i].getName() + "Confirm/:" + action + ";");
+            Serial3.print(out[i].getStateMsg());
+            break;
         }
     }
 }
@@ -137,9 +150,12 @@ void SerialHandler()
 
                 if (inString.substring(cstart, cend).equals("config"))
                 {
+                    Serial.println("DEBUG: Config detected");
                     if (inString.substring(sstart, send).equals("announce"))
                     {
+                        Serial.println("DEBUG: Announcing devices");
                         announceToESP();
+                        Serial.println("DEBUG: Announce end");
                     }
                 }
                 else
@@ -147,6 +163,7 @@ void SerialHandler()
                     String channel = inString.substring(cstart, cend);
                     String action = inString.substring(sstart, send);
 
+                    Serial.println("DEBUG: Received update - " + channel + ":" + action);
                     updateDeviceStatus(channel, action);
                 }
             }
@@ -192,8 +209,6 @@ void setup()
     button1.init();
     button2.init();
     button3.init();
-
-    announceToESP();
 }
 
 /**
