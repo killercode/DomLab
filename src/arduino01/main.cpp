@@ -5,6 +5,7 @@
 #include <SoftwareSerial.h>
 #include "Button.h"
 #include <Relay.h>
+#include <GarageDoor.h>
 
 #define PIN_SWITCH_1 22
 #define PIN_SWITCH_2 24
@@ -18,6 +19,9 @@
 #define INPUT1 53
 #define INPUT2 51
 #define INPUT3 49
+
+// handler for MQTT messages
+void callback(String command);
 
 String inString;
 
@@ -35,6 +39,8 @@ Relay out[8] = {
     Relay(PIN_SWITCH_7, "/house/switch7/", "command/", "state/", HIGH, NC),
     Relay(PIN_SWITCH_8, "/house/switch8/", "command/", "state/", HIGH, NC),
 };
+
+GarageDoor garage1 = GarageDoor(PIN_SWITCH_8, 2, 3, "/house/garage1/", "cover/set", "cover/position", "cover/set_position", 0, NC);
 
 /**
  * @brief  Trigget button events
@@ -72,10 +78,8 @@ void button_event(const char *button_name, int event)
             }
             else
             {
-                out[6].SwitchState();
-                out[7].SwitchState();
-                Serial3.print(out[6].getCommandMsg());
-                Serial3.print(out[7].getCommandMsg());
+                // TODO add handler for switches to allow momentary buttons
+                Serial3.print(garage1.getCommandMsg());
             }
         }
     }
@@ -109,6 +113,7 @@ void updateDeviceStatus(String channel, String action)
         {
             out[i].setStringState(action);
             Serial3.print(out[i].getStateMsg());
+            delay(10);
             break;
         }
     }
@@ -209,6 +214,9 @@ void setup()
     button1.init();
     button2.init();
     button3.init();
+
+    garage1.init();
+    garage1.setCallback(callback);
 }
 
 /**
@@ -226,7 +234,14 @@ void loop()
     button_event("2", event2);
     button_event("3", event3);
 
+    garage1.handle();
+
     SerialHandler();
 
-    delay(20);
+    //delay(20);
+}
+
+void callback(String message)
+{
+    Serial3.println(message);
 }
