@@ -95,6 +95,7 @@ void reconnectMQTT()
                 // Update accordingly with your MQTT account
                 Serial.print("!:MQTT Connected;");
                 Serial.print("<config:announce;");
+                Serial.flush();
 
                 // Do not forget to replicate the above line if you will have more than the above number of relay switches
             }
@@ -209,9 +210,8 @@ void loop()
             inString += inChar;
         }
 
-        if (inString.length() > 255)
+        if (inString.length() > 1000)
         {
-            Serial.flush();
             inString = "";
         }
 
@@ -237,27 +237,21 @@ void loop()
 
                 channel.toCharArray(cbuff, csize + 1);
                 action.toCharArray(sbuff, ssize + 1);
-
+                sbuff[ssize + 1] = '\0';
                 if (channel.equals("announce"))
                 {
                     client.subscribe(sbuff);
-                    Serial.print("!:ANNOUNCED - " + String(sbuff) + ";");
-                    delay(10);
                 }
                 else
                 {
-                    Serial.print("!:CHANNEL - " + String(cbuff) + ";");
-                    delay(10);
-                    Serial.print("!:ACTION - " + String(sbuff) + ";");
-                    delay(10);
                     client.publish(cbuff, sbuff, true);
                 }
-                Serial.flush();
             }
             else
             {
                 Serial.print("!ESP received a wrong command: [" + inString + "];");
                 Serial.flush();
+                delay(20);
             }
             inString = "";
         }
@@ -268,6 +262,9 @@ void callback(char *topic, byte *payload, unsigned int length)
 {
     //convert topic to string to make it easier to work with
     String topicStr = topic;
+    payload[length] = '\0';
 
-    Serial.print("<" + topicStr + ":" + String((char)payload[0]) + ";");
+    Serial.print("<" + topicStr + ":" + String((char *)payload) + ";");
+    Serial.flush();
+    delay(20);
 }

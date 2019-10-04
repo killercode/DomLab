@@ -82,14 +82,12 @@ public:
     String getCommandTopic();
 
 private:
-    uint8_t state;
-    int operation;
+    const int pin; // pin
     String mainTopic;
     String commandTopic;
     String stateTopic;
-
-protected:
-    const int pin; // pin
+    uint8_t state;
+    int operation;
 };
 
 Relay::Relay(int p, String m, String ct, String st, uint8_t s, int o) : pin(p), mainTopic(m), commandTopic(ct), stateTopic(st), state(s), operation(o)

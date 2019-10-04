@@ -1,5 +1,9 @@
 #include <Arduino.h>
 
+/**
+ * @brief  Enumerator with the status of the cover
+ * @note   For now we only support 3 states system
+ */
 enum
 {
     ST_UNKNOWN = 0,
@@ -10,6 +14,18 @@ enum
     ST_ERROR
 };
 
+/**
+ * @brief  Relay State
+ */
+enum
+{
+    RL_OFF = 0,
+    RL_ON
+};
+
+/**
+ * @brief  Class representing a Garage Cover, this means that we should configure a relay 2 sensors
+ */
 class GarageDoor
 {
 
@@ -20,7 +36,6 @@ public:
                String mainTopic,
                String commandTopic,
                String positionTopic,
-               String setPositionTopic,
                int state,
                int operation);
 
@@ -30,22 +45,74 @@ public:
      */
     void init();
 
+    /**
+     * @brief  Loop handler to keep the status correct
+     * @note
+     * @retval None
+     */
     void handle();
 
-    void setCallback(void (*callback)(String));
+    /**
+     * @brief  Get a string with the command topic
+     * @retval Command topic
+     */
+    String getCommandTopic();
 
+    /**
+     * @brief  Get the command message to be sent
+     * @retval MQTT message to be sent
+     */
     String getCommandMsg();
-    String getStateMsg();
+
+    /**
+     * @brief  Get the position mesage to be sent
+     * @retval MQTT message to be sent
+     */
+    String getPositionMsg();
+
+    /**
+     * @brief  Get the relay message to be sent
+     * @retval MQTT message to be sent
+     */
+    String getRelayMsg();
+
+    /**
+     * @brief  Set the cover callback
+     */
+    void setCoverCallback(void (*CoverCallback)(String));
+
+    /**
+     * @brief  Set the relay callback
+     * @note
+     * @retval None
+     */
+    void setRelayCallback(void (*RelayCallback)(String));
+
+    /**
+     * @brief  set a relay state
+     * @note
+     * @param  newstate: New state of the relay
+     * @param  feedback: Should we send the feedback to the MQTT broker?
+     */
+    void setRelayState(int newstate, bool feedback);
+
+    /**
+     * @brief  Get the actual relay state
+     * @retval relay state
+     */
+    int getRelayState();
 
 private:
-    void (*callback)(String);
+    void (*CoverCallback)(String);
+    void (*RelayCallback)(String);
     int relayPin;
+    int relayState;
+    int relayCounter;
     int sensorClosedPin;
     int sensorOpenPin;
     String mainTopic;
     String commandTopic;
     String positionTopic;
-    String setPositionTopic;
     int state;
     int operation;
     int last_stat;
@@ -61,7 +128,6 @@ GarageDoor::GarageDoor(int rPin,
                        String mt,
                        String ct,
                        String st,
-                       String spt,
                        int s,
                        int o) : relayPin(rPin),
                                 sensorClosedPin(sCPin),
@@ -69,7 +135,6 @@ GarageDoor::GarageDoor(int rPin,
                                 mainTopic(mt),
                                 commandTopic(ct),
                                 positionTopic(st),
-                                setPositionTopic(spt),
                                 state(s),
                                 operation(o)
 {
@@ -81,7 +146,7 @@ void GarageDoor::init()
     pinMode(relayPin, OUTPUT);
     pinMode(sensorClosedPin, INPUT_PULLUP);
     pinMode(sensorOpenPin, INPUT_PULLUP);
-
+    relayState = RL_OFF;
     if (operation == NC)
     {
         digitalWrite(relayPin, HIGH); // pull-up
@@ -105,29 +170,98 @@ void GarageDoor::init()
     }
 }
 
-String GarageDoor::getCommandMsg()
+String GarageDoor::getCommandTopic()
 {
-    return ">" + mainTopic + commandTopic + ":OPEN;";
+    return mainTopic + commandTopic;
 }
 
-String GarageDoor::getStateMsg()
+String GarageDoor::getCommandMsg()
 {
-    if (state == ST_CLOSED)
+    if (relayState == RL_ON)
     {
-        return ">" + mainTopic + setPositionTopic + ":0;";
-    }
-    if (state == ST_OPEN)
-    {
-        return ">" + mainTopic + setPositionTopic + ":100;";
+        return ">" + mainTopic + commandTopic + ":OPEN;";
     }
     else
     {
-        return ">" + mainTopic + setPositionTopic + ":50;";
+        return ">" + mainTopic + commandTopic + ":CLOSE;";
     }
+}
+
+String GarageDoor::getPositionMsg()
+{
+    if (state == ST_CLOSED)
+    {
+        return ">" + mainTopic + positionTopic + ":0;";
+    }
+    if (state == ST_OPEN)
+    {
+        return ">" + mainTopic + positionTopic + ":100;";
+    }
+    else
+    {
+        return ">" + mainTopic + positionTopic + ":50;";
+    }
+}
+
+void GarageDoor::setRelayState(int newState, bool feedback)
+{
+    if (newState != relayState)
+    {
+        if (relayState == RL_OFF)
+        {
+
+            relayState = RL_ON;
+            relayCounter = 200;
+
+            if (operation == NC)
+            {
+                digitalWrite(relayPin, LOW);
+            }
+            else
+            {
+                digitalWrite(relayPin, HIGH);
+            }
+        }
+        else
+        {
+            relayState = RL_OFF;
+            if (operation == NC)
+            {
+                digitalWrite(relayPin, HIGH);
+            }
+            else
+            {
+                digitalWrite(relayPin, LOW);
+            }
+        }
+        if (feedback)
+        {
+            if (RelayCallback != nullptr)
+            {
+                (*RelayCallback)(getCommandMsg());
+            }
+        }
+    }
+}
+
+int GarageDoor::getRelayState()
+{
+    return relayState;
 }
 
 void GarageDoor::handle()
 {
+
+    if (relayCounter > 0)
+    {
+        relayCounter--;
+    }
+
+    // if counter reached 0 shut off the relay
+    if (relayCounter == 0 && relayState == RL_ON)
+    {
+        this->setRelayState(RL_OFF, true);
+    }
 
     bool closed = digitalRead(sensorClosedPin) == LOW;
     bool open = digitalRead(sensorOpenPin) == LOW;
@@ -177,32 +311,20 @@ void GarageDoor::handle()
 
     if (last_stat != state)
     {
-        if (state == ST_OPEN)
+        if (CoverCallback != nullptr)
         {
-            Serial.println("DOOR OPEN");
+            (*CoverCallback)(getPositionMsg());
         }
-        else if (state == ST_CLOSED)
-        {
-            Serial.println("DOOR CLOSED");
-        }
-        else if (state == ST_OPENING)
-        {
-            Serial.println("DOOR OPENING");
-        }
-        else if (state == ST_CLOSING)
-        {
-            Serial.println("DOOR CLOSING");
-        }
-        else if (state == ST_UNKNOWN)
-        {
-            Serial.println("UNKNOWN");
-        }
-        (*callback)(getStateMsg());
         last_stat = state;
     }
 }
 
-void GarageDoor::setCallback(void (*callback)(String))
+void GarageDoor::setCoverCallback(void (*CoverCallback)(String))
 {
-    this->callback = callback;
+    this->CoverCallback = CoverCallback;
+}
+
+void GarageDoor::setRelayCallback(void (*RelayCallback)(String))
+{
+    this->RelayCallback = RelayCallback;
 }

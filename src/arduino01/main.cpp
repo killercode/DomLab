@@ -20,16 +20,19 @@
 #define INPUT2 51
 #define INPUT3 49
 
-// handler for MQTT messages
-void callback(String command);
+// handler for garage MQTT messages
+void CoverCallback(String command);
+void RelayCallback(String command);
 
 String inString;
 
+// Define buttons
 Button button1(INPUT1, DEFAULT_LONGPRESS_LEN * 2);
 Button button2(INPUT2, DEFAULT_LONGPRESS_LEN * 2);
 Button button3(INPUT3, DEFAULT_LONGPRESS_LEN * 2);
 
-Relay out[8] = {
+// Define relays
+Relay out[7] = {
     Relay(PIN_SWITCH_1, "/house/switch1/", "command/", "state/", HIGH, NC),
     Relay(PIN_SWITCH_2, "/house/switch2/", "command/", "state/", HIGH, NC),
     Relay(PIN_SWITCH_3, "/house/switch3/", "command/", "state/", HIGH, NC),
@@ -37,10 +40,11 @@ Relay out[8] = {
     Relay(PIN_SWITCH_5, "/house/switch5/", "command/", "state/", HIGH, NC),
     Relay(PIN_SWITCH_6, "/house/switch6/", "command/", "state/", HIGH, NC),
     Relay(PIN_SWITCH_7, "/house/switch7/", "command/", "state/", HIGH, NC),
-    Relay(PIN_SWITCH_8, "/house/switch8/", "command/", "state/", HIGH, NC),
+    //Relay(PIN_SWITCH_8, "/house/switch8/", "command/", "state/", HIGH, NC),
 };
 
-GarageDoor garage1 = GarageDoor(PIN_SWITCH_8, 2, 3, "/house/garage1/", "cover/set", "cover/position", "cover/set_position", 0, NC);
+// Define Garage doors
+GarageDoor garage1 = GarageDoor(PIN_SWITCH_8, 2, 3, "/house/garage1/", "cover/set", "cover/position", 0, NC);
 
 /**
  * @brief  Trigget button events
@@ -57,29 +61,36 @@ void button_event(const char *button_name, int event)
             int bNum = String(button_name).toInt();
             if (bNum == 1)
             {
-                out[0].SwitchState();
-                out[1].SwitchState();
-                Serial3.print(out[0].getCommandMsg());
-                Serial3.print(out[1].getCommandMsg());
+                garage1.setRelayState(RL_ON, true);
+                //Serial3.print(garage1.getCommandMsg());
+                //out[0].SwitchState();
+                //out[1].SwitchState();
+                //Serial3.print(out[0].getCommandMsg());
+                //Serial3.flush();
+                //Serial3.print(out[1].getCommandMsg());
+                //Serial3.flush();
             }
             else if (bNum == 2)
             {
                 out[2].SwitchState();
                 out[3].SwitchState();
                 Serial3.print(out[2].getCommandMsg());
+                Serial3.flush();
                 Serial3.print(out[3].getCommandMsg());
+                Serial3.flush();
             }
             else if (bNum == 3)
             {
                 out[4].SwitchState();
                 out[5].SwitchState();
                 Serial3.print(out[4].getCommandMsg());
+                Serial3.flush();
                 Serial3.print(out[5].getCommandMsg());
+                Serial3.flush();
             }
             else
             {
                 // TODO add handler for switches to allow momentary buttons
-                Serial3.print(garage1.getCommandMsg());
             }
         }
     }
@@ -91,12 +102,17 @@ void button_event(const char *button_name, int event)
  */
 void announceToESP()
 {
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 7; i++)
     {
-        Serial.println("DEBUG: ANNOUNCE - " + out[i].getCommandTopic());
         Serial3.print(">announce:" + out[i].getCommandTopic() + ";");
-        delay(10);
+        Serial3.flush();
     }
+
+    Serial3.print(">announce:" + garage1.getCommandTopic() + ";");
+    Serial3.flush();
+
+    garage1.setCoverCallback(CoverCallback);
+    garage1.setRelayCallback(RelayCallback);
 }
 
 /**
@@ -107,14 +123,23 @@ void announceToESP()
  */
 void updateDeviceStatus(String channel, String action)
 {
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 7; i++)
     {
         if (out[i].getCommandTopic().equals(channel))
         {
             out[i].setStringState(action);
             Serial3.print(out[i].getStateMsg());
-            delay(10);
+            Serial3.flush();
             break;
+        }
+    }
+
+    if (garage1.getCommandTopic().equals(channel))
+    {
+        if (action.equals("OPEN"))
+        {
+            Serial.flush();
+            garage1.setRelayState(RL_ON, false);
         }
     }
 }
@@ -137,7 +162,6 @@ void SerialHandler()
         if (inString.length() > 255)
         {
             Serial.println("ARDUINO: MAX BUFFER REACHED [" + inString + "]");
-            Serial3.flush();
             inString = "";
         }
 
@@ -147,38 +171,34 @@ void SerialHandler()
             {
                 int cstart = 1;
                 int cend = inString.indexOf(':');
-                int csize = cend - cstart;
 
                 int sstart = inString.indexOf(':') + 1;
                 int send = inString.indexOf(';');
-                int ssize = send - sstart;
 
                 if (inString.substring(cstart, cend).equals("config"))
                 {
-                    Serial.println("DEBUG: Config detected");
                     if (inString.substring(sstart, send).equals("announce"))
                     {
-                        Serial.println("DEBUG: Announcing devices");
                         announceToESP();
-                        Serial.println("DEBUG: Announce end");
                     }
                 }
                 else
                 {
                     String channel = inString.substring(cstart, cend);
                     String action = inString.substring(sstart, send);
-
-                    Serial.println("DEBUG: Received update - " + channel + ":" + action);
+                    Serial.println("DEBUG: Received update - " + channel + ":" + action + ";");
                     updateDeviceStatus(channel, action);
                 }
             }
             else if (inString.indexOf('!') >= 0)
             {
-                Serial.println("DEBUG" + inString);
+                Serial.println("DEBUG ESP" + inString + ";");
+                Serial.flush();
             }
             else
             {
                 Serial.println("DEBUG received a wrong command: [" + inString + "];");
+                Serial.flush();
             }
 
             inString = "";
@@ -203,9 +223,9 @@ void setup()
     pinMode(PIN_SWITCH_5, OUTPUT);
     pinMode(PIN_SWITCH_6, OUTPUT);
     pinMode(PIN_SWITCH_7, OUTPUT);
-    pinMode(PIN_SWITCH_8, OUTPUT);
+    //pinMode(PIN_SWITCH_8, OUTPUT);
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 7; i++)
     {
         out[i].init();
     }
@@ -216,7 +236,8 @@ void setup()
     button3.init();
 
     garage1.init();
-    garage1.setCallback(callback);
+
+    delay(20);
 }
 
 /**
@@ -238,10 +259,22 @@ void loop()
 
     SerialHandler();
 
+    delay(20);
+}
+
+void CoverCallback(String message)
+{
+    Serial.println(message);
+    Serial.flush();
+    Serial3.println(message);
+    Serial3.flush();
     //delay(20);
 }
 
-void callback(String message)
+void RelayCallback(String message)
 {
+    //Serial.println(message);
+    //Serial.flush();
     Serial3.println(message);
+    Serial3.flush();
 }
